@@ -3,60 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人學習與娛樂進度追蹤器</title>
+    <title>進度追蹤管理面板</title>
     <style>
+        /* 引入你的 Miao.ttf 字體 */
+        @font-face {
+            font-family: 'MiaoFont';
+            src: url('Miao.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         :root {
-            --bg-color: #f5f7fa;
+            --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #333333;
-            --primary-color: #4a90e2;
-            --border-color: #e1e4e8;
+            --video-color: #e74c3c;
+            --book-color: #2ecc71;
+            --border-color: #e2e8f0;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            /* 優先套用苗字體，若讀取不到則使用系統預設細黑體 */
+            font-family: 'MiaoFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
 
-        .container {
-            width: 100%;
-            max-width: 800px;
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         h1 {
             text-align: center;
             color: #2c3e50;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+        }
+
+        /* 左右兩大區塊獨立分開 */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-box {
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            min-height: 400px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #cbd5e1;
         }
 
         .section-title {
-            font-size: 1.5rem;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid var(--border-color);
+            font-size: 1.6rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        .add-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'MiaoFont', sans-serif;
+            transition: opacity 0.2s;
+        }
+
+        .add-btn:hover {
+            opacity: 0.9;
+        }
+
+        .video-theme .add-btn { background-color: var(--video-color); }
+        .book-theme .add-btn { background-color: var(--book-color); }
+
+        /* 卡片列表 */
+        .cards-list {
+            display: flex;
+            flex-direction: column;
             gap: 20px;
         }
 
         .card {
             background: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
             padding: 20px;
             border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
             position: relative;
         }
 
@@ -68,64 +123,72 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 25px;
-            height: 25px;
+            width: 24px;
+            height: 24px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* 圖片容器：自適應大小的核心 */
+        /* 圖片自適應設定 */
         .image-container {
             width: 100%;
             margin-bottom: 15px;
             border-radius: 8px;
             overflow: hidden;
             background: #eaeaea;
-            display: none; /* 預設隱藏，有圖片才顯示 */
+            display: none;
         }
 
         .image-container img {
             width: 100%;
             height: auto;
             display: block;
-            object-fit: contain; /* 保持原圖比例自適應 */
+            object-fit: contain; /* 保持原圖比例完美縮放 */
         }
 
         .card-title {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             font-weight: bold;
             margin-bottom: 15px;
+            padding-right: 25px;
             outline: none;
+            border-bottom: 1px dashed transparent;
         }
 
-        /* 進度條樣式 */
+        .card-title:focus {
+            border-bottom-color: #94a3b8;
+        }
+
+        /* 進度條外殼 */
         .progress-container {
-            background-color: #e9ecef;
+            background-color: #e2e8f0;
             border-radius: 10px;
-            height: 12px;
+            height: 14px;
             width: 100%;
             overflow: hidden;
             margin: 15px 0 8px 0;
         }
 
         .progress-bar {
-            background-color: var(--primary-color);
             height: 100%;
             width: 0%;
             transition: width 0.3s ease;
         }
 
+        .video-theme .progress-bar { background-color: var(--video-color); }
+        .book-theme .progress-bar { background-color: var(--book-color); }
+
         .progress-text {
-            font-size: 0.9rem;
-            color: #666;
+            font-size: 0.95rem;
+            color: #475569;
             display: flex;
             justify-content: space-between;
         }
 
-        /* 輸入區塊樣式 */
+        /* 輸入表單 */
         .inputs-group {
             margin-top: 15px;
             display: grid;
@@ -140,7 +203,7 @@
 
         .input-field label {
             font-size: 0.8rem;
-            color: #888;
+            color: #64748b;
             margin-bottom: 4px;
         }
 
@@ -149,12 +212,13 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.9rem;
+            font-family: 'MiaoFont', sans-serif;
         }
 
         .file-input-label {
             grid-column: span 2;
-            background: #f1f3f5;
-            border: 1px dashed #ced4da;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
             padding: 8px;
             text-align: center;
             border-radius: 6px;
@@ -164,89 +228,71 @@
         }
 
         .file-input-label:hover {
-            background: #e2e6ea;
+            background: #f1f5f9;
         }
 
         .file-input {
             display: none;
         }
-
-        /* 控制面板 */
-        .controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .add-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background-color: #2ecc71;
-            color: white;
-            font-size: 1rem;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .add-btn:hover {
-            background-color: #27ae60;
-        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>📚 影音與書籍進度管理面板</h1>
+    <div class="main-container">
+        <h1>📊 進度管理控制面板</h1>
 
-        <div class="controls">
-            <button class="add-btn" onclick="addItem('video')">🎬 新增影音項目</button>
-            <button class="add-btn" style="background-color: #9b59b6;" onclick="addItem('book')">📖 新增書籍項目</button>
+        <div class="dashboard-grid">
+            
+            <!-- 🎬 影片獨立區塊 -->
+            <div class="section-box video-theme">
+                <div class="section-header">
+                    <div class="section-title">🎬 影片進度</div>
+                    <button class="add-btn" onclick="addItem('video')">＋ 新增影片</button>
+                </div>
+                <div id="video-list" class="cards-list"></div>
+            </div>
+
+            <!-- 📖 書籍獨立區塊 -->
+            <div class="section-box book-theme">
+                <div class="section-header">
+                    <div class="section-title">📖 書籍進度</div>
+                    <button class="add-btn" onclick="addItem('book')">＋ 新增書籍</button>
+                </div>
+                <div id="book-list" class="cards-list"></div>
+            </div>
+
         </div>
-
-        <div class="section-title">🎬 影片進度追蹤</div>
-        <div id="video-grid" class="grid"></div>
-
-        <div class="section-title">📖 書籍進度追蹤</div>
-        <div id="book-grid" class="grid"></div>
     </div>
 
     <script>
-        // 初始化資料來源 (從 LocalStorage 讀取)
-        let items = JSON.parse(localStorage.getItem('progress-items')) || [];
+        let items = JSON.parse(localStorage.getItem('split-progress-items')) || [];
 
-        // 時間轉換核心邏輯：將 "12:00"、"12:30:15" 或 "12" 統一轉換為秒數
+        // 時間轉秒數核心 (處理 hh:mm)
         function timeToSeconds(timeStr) {
             if (!timeStr) return 0;
             const parts = timeStr.trim().split(':').map(Number);
             if (parts.some(isNaN)) return 0;
             
-            if (parts.length === 3) {
-                // hh:mm:ss
-                return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
-            } else if (parts.length === 2) {
-                // hh:mm 或 mm:ss (這邊依題目假設 12:00 代表 12小時00分)
+            if (parts.length === 2) {
                 return (parts[0] * 3600) + (parts[1] * 60);
+            } else if (parts.length === 3) {
+                return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
             } else if (parts.length === 1) {
-                // 純數字當作小時處理
                 return parts[0] * 3600;
             }
             return 0;
         }
 
-        // 格式化輸出時間文字
         function formatTimeString(timeStr) {
             if (!timeStr) return '00:00';
             return timeStr.trim();
         }
 
-        // 新增項目
         function addItem(type) {
             const newItem = {
                 id: Date.now().toString(),
                 type: type,
-                title: type === 'video' ? '新影片名稱 (點擊編輯)' : '新書本名稱 (點擊編輯)',
+                title: type === 'video' ? '新影片名稱 (點擊直接修改)' : '新書本名稱 (點擊直接修改)',
                 image: '',
                 current: type === 'video' ? '03:20' : '0',
                 total: type === 'video' ? '12:00' : '100'
@@ -255,15 +301,13 @@
             saveAndRender();
         }
 
-        // 刪除項目
         function deleteItem(id) {
-            if(confirm('確定要刪除此項目嗎？')) {
+            if(confirm('確定要刪除此進度項目嗎？')) {
                 items = items.filter(item => item.id !== id);
                 saveAndRender();
             }
         }
 
-        // 更新欄位內容
         function updateItem(id, field, value) {
             const item = items.find(item => item.id === id);
             if (item) {
@@ -272,7 +316,6 @@
             }
         }
 
-        // 處理圖片上傳 (轉為 Base64 儲存於 LocalStorage)
         function handleImageUpload(event, id) {
             const file = event.target.files[0];
             if (!file) return;
@@ -284,31 +327,28 @@
             reader.readAsDataURL(file);
         }
 
-        // 儲存並渲染畫面
         function saveAndRender() {
-            localStorage.setItem('progress-items', JSON.stringify(items));
+            localStorage.setItem('split-progress-items', JSON.stringify(items));
             renderDOM();
         }
 
-        // 渲染主功能
         function renderDOM() {
-            const videoGrid = document.getElementById('video-grid');
-            const bookGrid = document.getElementById('book-grid');
+            const videoList = document.getElementById('video-list');
+            const bookList = document.getElementById('book-list');
             
-            videoGrid.innerHTML = '';
-            bookGrid.innerHTML = '';
+            videoList.innerHTML = '';
+            bookList.innerHTML = '';
 
             items.forEach(item => {
                 let percent = 0;
                 let progressTextLeft = '';
                 let progressTextRight = '';
 
-                // 計算進度百分比與顯示文本
                 if (item.type === 'video') {
                     const currentSec = timeToSeconds(item.current);
                     const totalSec = timeToSeconds(item.total);
                     percent = totalSec > 0 ? (currentSec / totalSec) * 100 : 0;
-                    percent = Math.min(Math.max(percent, 0), 100); // 限制在 0-100 之間
+                    percent = Math.min(Math.max(percent, 0), 100);
                     
                     progressTextLeft = `已看: ${formatTimeString(item.current)}`;
                     progressTextRight = `總長: ${formatTimeString(item.total)}`;
@@ -322,7 +362,6 @@
                     progressTextRight = `總共: ${totalPages} 頁`;
                 }
 
-                // 建立卡片 HTML
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
@@ -354,21 +393,21 @@
                             <input type="text" value="${item.total}" onchange="updateItem('${item.id}', 'total', this.value)">
                         </div>
                         <label class="file-input-label">
-                            📷 上傳/更換自適應封面
+                            📷 插入自適應圖片
                             <input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(event, '${item.id}')">
                         </label>
                     </div>
                 `;
 
                 if (item.type === 'video') {
-                    videoGrid.appendChild(card);
+                    videoList.appendChild(card);
                 } else {
-                    bookGrid.appendChild(card);
+                    bookList.appendChild(card);
                 }
             });
         }
 
-        // 網頁開啟時第一次渲染
+        // 初次加載頁面渲染
         renderDOM();
     </script>
 </body>
