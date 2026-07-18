@@ -85,7 +85,7 @@
             font-size: 1.1rem;
             border: none;
             background: transparent;
-            width: 90px;
+            width: 100px;
             padding: 2px;
             font-weight: bold;
         }
@@ -116,6 +116,7 @@
             cursor: pointer;
             font-family: 'MiaoFont', sans-serif;
             font-size: 0.9rem;
+            white-space: nowrap;
         }
         .add-tab-btn:hover {
             background: #e2e8f0;
@@ -186,7 +187,6 @@
             border-radius: 8px;
             overflow: hidden;
             background: #f1f5f9;
-            display: none;
         }
 
         .image-container img {
@@ -202,6 +202,10 @@
             margin-bottom: 15px;
             padding-right: 25px;
             outline: none;
+            border-bottom: 1px dashed transparent;
+        }
+        .card-title:focus {
+            border-bottom: 1px dashed #94a3b8;
         }
 
         /* 進度條 */
@@ -235,15 +239,15 @@
             background: #fee2e2;
             color: var(--video-color);
             border: 1px solid #fca5a5;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.85rem;
+            padding: 4px 14px;
+            border-radius: 6px;
+            font-size: 0.9rem;
             cursor: pointer;
-            text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 4px;
             font-family: 'MiaoFont', sans-serif;
+            font-weight: bold;
         }
         .play-link-btn:hover { background: #fecaca; }
 
@@ -311,7 +315,7 @@
     </div>
 
     <script>
-        // 初始化預設分頁資料數據結構
+        // 初始化與預設資料
         let defaultTabs = [
             { id: "tab_1", name: "🎬 我的影片", type: "video" },
             { id: "tab_2", name: "📖 我的書籍", type: "book" }
@@ -325,45 +329,59 @@
 
         let activeTabId = localStorage.getItem('active-tab-id') || tabs[0].id;
 
-        // 時間轉秒數核心 (處理 hh:mm 或 hh:mm:ss)
+        // 確保目前選中的分頁還存在
+        if (!tabs.some(t => t.id === activeTabId)) {
+            activeTabId = tabs[0].id;
+        }
+
+        // 時間轉秒數核心 (處理 hh:mm:ss 或 mm:ss)
         function timeToSeconds(timeStr) {
             if (!timeStr) return 0;
             const parts = timeStr.trim().split(':').map(Number);
             if (parts.some(isNaN)) return 0;
             
             if (parts.length === 2) {
-                return (parts[0] * 3600) + (parts[1] * 60);
+                // mm:ss
+                return (parts[0] * 60) + parts[1];
             } else if (parts.length === 3) {
+                // hh:mm:ss
                 return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
             } else if (parts.length === 1) {
-                return parts[0] * 3600;
+                return parts[0];
             }
             return 0;
         }
 
-        // 當點擊影片播放時，動態將進度時間計算為 YouTube 等平台支援的 &t= 秒數
-        function openVideoLocation(url, currentTimeStr) {
-            if (!url) {
-                alert('請先在下方欄位填寫影片網址(如 YouTube 連結)！');
+        // 點擊播放按鈕的跳轉邏輯
+        function openVideoLocation(id) {
+            const item = items.find(item => item.id === id);
+            if (!item || !item.url) {
+                alert('請先填寫正確的影片網址！');
                 return;
             }
-            const seconds = timeToSeconds(currentTimeStr);
+
+            let url = item.url.trim();
+            const seconds = timeToSeconds(item.current);
             let finalUrl = url;
 
             // 判斷是否為 YouTube 連結並附加時間參數
             if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                // 移除原本可能就存在的 t 參數避免衝突
+                url = url.replace(/([?&])t=[^&]*/, '');
+                
                 if (url.includes('?')) {
-                    finalUrl += `&t=${seconds}s`;
+                    finalUrl = `${url}&t=${seconds}s`;
                 } else {
-                    finalUrl += `?t=${seconds}s`;
+                    finalUrl = `${url}?t=${seconds}s`;
                 }
             }
+            
             window.open(finalUrl, '_blank');
         }
 
         // 分頁管理：新增分頁
         function addTab() {
-            const type = confirm('要新增「影片分頁」點選確定(OK)，「書籍分頁」點選取消(Cancel)') ? 'video' : 'book';
+            const type = confirm('要新增「影片分頁」請點選 [確定]，新增「書籍分頁」請點選 [取消]') ? 'video' : 'book';
             const icon = type === 'video' ? '🎬 ' : '📖 ';
             const newId = 'tab_' + Date.now();
             const newTab = {
@@ -382,18 +400,17 @@
             if (tab) {
                 tab.name = newName;
                 localStorage.setItem('tab-configs', JSON.stringify(tabs));
-                document.getElementById('current-tab-title').innerText = newName;
             }
         }
 
         // 分頁管理：刪除分頁
         function deleteTab(id, event) {
-            event.stopPropagation(); // 阻止觸發切換分頁
+            event.stopPropagation(); 
             if (tabs.length <= 1) {
                 alert('請至少保留一個分頁！');
                 return;
             }
-            if (confirm('確定要刪除整個分頁，以及該分頁下的所有進度卡片嗎？（不可復原）')) {
+            if (confirm('確定要刪除整個分頁，以及裡面所有的進度卡片嗎？（刪除後無法復原）')) {
                 tabs = tabs.filter(t => t.id !== id);
                 items = items.filter(item => item.tabId !== id);
                 if (activeTabId === id) {
@@ -412,7 +429,7 @@
                 id: Date.now().toString(),
                 tabId: activeTabId,
                 type: currentTab.type,
-                title: currentTab.type === 'video' ? '影片名稱 (點此修改)' : '書本名稱 (點此修改)',
+                title: currentTab.type === 'video' ? '新影片項目 (點此修改名稱)' : '新書籍項目 (點此修改名稱)',
                 image: '',
                 current: currentTab.type === 'video' ? '00:00' : '0',
                 total: currentTab.type === 'video' ? '01:00' : '100',
@@ -429,13 +446,14 @@
             }
         }
 
+        // 核心更新機制：任何欄位變更就立刻同步回 localStorage，保證重整不遺失！
         function updateItem(id, field, value) {
             const item = items.find(item => item.id === id);
             if (item) {
                 item[field] = value;
                 localStorage.setItem('tab-items', JSON.stringify(items));
                 
-                // 如果更新的是進度數值，重新局部渲染進度條，避免全頁重新載入干擾輸入
+                // 如果是進度變更，即時更新畫面上的進度條長度與文字
                 if(field === 'current' || field === 'total') {
                     refreshProgressBar(id);
                 }
@@ -454,7 +472,7 @@
             reader.readAsDataURL(file);
         }
 
-        // 局部更新單張卡片進度條表現
+        // 局部即時更新畫面進度條，避免全頁重刷干擾使用者輸入
         function refreshProgressBar(id) {
             const item = items.find(item => item.id === id);
             const cardEl = document.querySelector(`[data-card-id="${id}"]`);
@@ -491,9 +509,9 @@
             renderDOM();
         }
 
-        // 核心界面渲染
+        // 畫面渲染主體
         function renderDOM() {
-            // 1. 渲染分頁按鈕列
+            // 1. 渲染分頁列
             const tabsContainer = document.getElementById('tabs-container');
             tabsContainer.innerHTML = '';
             
@@ -522,18 +540,16 @@
             addTabBtn.onclick = addTab;
             tabsContainer.appendChild(addTabBtn);
 
-            // 2. 鎖定當前活躍分頁
+            // 2. 鎖定並取得當前分頁配置
             const currentTab = tabs.find(t => t.id === activeTabId) || tabs[0];
-            activeTabId = currentTab.id;
             
             document.getElementById('current-tab-title').innerText = currentTab.name;
             
-            // 變更按鈕外觀風格
             const addItemBtn = document.getElementById('add-item-btn');
             addItemBtn.className = `add-card-btn ${currentTab.type === 'video' ? 'video-theme-btn' : 'book-theme-btn'}`;
             addItemBtn.onclick = addItem;
 
-            // 3. 篩選並渲染卡片進度清單
+            // 3. 渲染進度卡片群
             const cardsGrid = document.getElementById('cards-grid');
             cardsGrid.innerHTML = '';
 
@@ -566,9 +582,11 @@
                 card.innerHTML = `
                     <button class="card-delete-btn" onclick="deleteItem('${item.id}')">✕</button>
                     
-                    <div class="image-container" style="display: ${item.image ? 'block' : 'none'}">
-                        <img src="${item.image || ''}" alt="Cover">
+                    ${item.image ? `
+                    <div class="image-container">
+                        <img src="${item.image}" alt="Cover">
                     </div>
+                    ` : ''}
 
                     <div class="card-title" contenteditable="true" onblur="updateItem('${item.id}', 'title', this.innerText)">${item.title}</div>
                     
@@ -584,19 +602,19 @@
 
                     <div class="inputs-group">
                         <div class="input-field">
-                            <label>${item.type === 'video' ? '目前進度 (hh:mm)' : '目前頁數'}</label>
+                            <label>${item.type === 'video' ? '目前進度 (例如 03:20)' : '目前頁數'}</label>
                             <input type="text" value="${item.current}" oninput="updateItem('${item.id}', 'current', this.value)">
                         </div>
                         <div class="input-field">
-                            <label>${item.type === 'video' ? '總長度 (hh:mm)' : '總頁數'}</label>
+                            <label>${item.type === 'video' ? '總長度 (例如 12:00)' : '總頁數'}</label>
                             <input type="text" value="${item.total}" oninput="updateItem('${item.id}', 'total', this.value)">
                         </div>
                         
                         <div class="input-field full-width">
                             <label>${item.type === 'video' ? '影片網址與跳轉播放' : '備註或購書網址'}</label>
-                            <div style="display:flex; gap: 5px;">
-                                <input type="text" style="flex:1;" placeholder="${item.type === 'video' ? '請輸入影片網址' : '（選填欄位）'}" value="${item.url || ''}" onchange="updateItem('${item.id}', 'url', this.value)">
-                                ${item.type === 'video' ? `<button class="play-link-btn" onclick="openVideoLocation('${item.url || ''}', '${item.current}')">▶ 播放</button>` : ''}
+                            <div style="display:flex; gap: 8px;">
+                                <input type="text" style="flex:1;" placeholder="${item.type === 'video' ? '請在此輸入影片網址' : '（選填欄位）'}" value="${item.url || ''}" oninput="updateItem('${item.id}', 'url', this.value)">
+                                ${item.type === 'video' ? `<button class="play-link-btn" onclick="openVideoLocation('${item.id}')">▶ 播放</button>` : ''}
                             </div>
                         </div>
 
@@ -615,4 +633,3 @@
     </script>
 </body>
 </html>
-
